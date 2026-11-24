@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="85%" r="85%">
+      <stop offset="0" stop-color="#3a2350"/>
+      <stop offset="0.45" stop-color="#121232"/>
+      <stop offset="1" stop-color="#04050c"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff1b8"/>
+      <stop offset="0.5" stop-color="#ffc23a"/>
+      <stop offset="1" stop-color="#d9861a"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="45%" cy="40%" r="60%">
+      <stop offset="0" stop-color="#fffbea"/>
+      <stop offset="1" stop-color="#f1d896"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff" opacity="0.7">
+    <circle cx="90" cy="90" r="2"/><circle cx="170" cy="60" r="1.5"/><circle cx="420" cy="80" r="2"/>
+    <circle cx="460" cy="190" r="1.5"/><circle cx="60" cy="210" r="1.5"/><circle cx="250" cy="45" r="1.5"/>
+  </g>
+  <circle cx="345" cy="160" r="62" fill="url(#moon)" filter="url(#glow)"/>
+  <g filter="url(#soft)">
+    <g fill="#ffd45a"><circle cx="96" cy="318" r="6"/><circle cx="104" cy="272" r="6"/><circle cx="122" cy="230" r="6"/><circle cx="148" cy="194" r="6"/><circle cx="180" cy="166" r="6"/></g>
+    <g fill="#7cf3ff"><circle cx="100" cy="295" r="5"/><circle cx="112" cy="250" r="5"/><circle cx="134" cy="211" r="5"/><circle cx="163" cy="179" r="5"/><circle cx="198" cy="156" r="5"/></g>
+    <g fill="#ff9fc6"><circle cx="420" cy="300" r="5"/><circle cx="412" cy="258" r="5"/></g>
+  </g>
+  <g transform="translate(118 236) scale(0.85)">
+    <path d="M -14 -28 Q 0 -40 14 -28 L 9 6 L -9 6 Z" fill="#ff4e3a"/>
+    <path d="M -5 -36 Q 0 -38 5 -36 L 3 6 L -3 6 Z" fill="#ffd45a"/>
+    <circle cx="0" cy="11" r="4" fill="#ffb347" filter="url(#soft)"/>
+  </g>
+  <g fill="url(#gold)" filter="url(#soft)">
+    <rect x="136" y="432" width="240" height="20" rx="3"/>
+    <rect x="156" y="414" width="200" height="20" rx="3"/>
+    <rect x="176" y="398" width="160" height="18" rx="3"/>
+    <path d="M 190 400 C 188 350 214 316 236 306 L 276 306 C 298 316 324 350 322 400 Z"/>
+    <rect x="232" y="292" width="48" height="16" rx="3"/>
+    <rect x="240" y="280" width="32" height="14" rx="3"/>
+    <path d="M 238 282 C 238 240 250 200 254 168 L 258 168 C 262 200 274 240 274 282 Z"/>
+    <rect x="248" y="156" width="16" height="10" rx="2"/>
+    <rect x="251" y="146" width="10" height="9" rx="2"/>
+  </g>
+  <circle cx="256" cy="136" r="13" fill="#fff6d8" opacity="0.35"/>
+  <circle cx="256" cy="136" r="6" fill="#ffffff"/>
+  <g fill="#ffc23a" opacity="0.9">
+    <path d="M 140 412 L 150 380 L 160 412 Z"/><path d="M 352 412 L 362 380 L 372 412 Z"/>
+  </g>
+  <rect y="452" width="512" height="60" fill="#05060d" opacity="0.85"/>
+  <rect x="150" y="460" width="212" height="5" fill="#ffc23a" opacity="0.35"/>
+  <rect x="180" y="472" width="152" height="4" fill="#ffc23a" opacity="0.2"/>
+</svg>

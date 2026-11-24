@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05060d" />
+  <meta name="description" content="A virtual drone light show over a night city — Tazaungdaing Full Moon Festival of Lights." />
+  <title>SkyLights — Drone Light Show</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png" />
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SkyLights" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="hud" class="ui">
+    <div class="brand"><span class="logo"></span>SkyLights</div>
+    <div id="caption" class="caption"></div>
+  </div>
+
+  <button id="btnShowUI" class="show-ui" title="Show controls (H)">◉</button>
+
+  <div id="transport" class="transport ui">
+    <button id="btnPrev" title="Previous (←)">⏮</button>
+    <button id="btnPlay" title="Play / Pause (Space)">⏸</button>
+    <button id="btnNext" title="Next (→)">⏭</button>
+    <div class="progress"><div id="progressBar"></div></div>
+    <button id="btnFire" title="Launch fireworks (G)">🎆</button>
+    <button id="btnRec" title="Record video (R)">⏺</button>
+    <button id="btnInstall" title="Install on this device" hidden>📲</button>
+    <button id="btnPanel" title="Studio panel">☰</button>
+    <button id="btnHide" title="Hide all controls (H)">⤢</button>
+  </div>
+
+  <aside id="panel" class="panel ui">
+    <nav class="tabs">
+      <button data-tab="show" class="active">Show</button>
+      <button data-tab="create">Create</button>
+      <button data-tab="music">Music</button>
+      <button data-tab="view">View</button>
+      <button data-tab="video">Video</button>
+    </nav>
+
+    <section data-pane="show" class="pane active">
+      <p class="hint">Click a step to jump to it. The show loops automatically.</p>
+      <ol id="stepList" class="steps"></ol>
+      <div class="row">
+        <select id="selPreset"></select>
+        <button id="btnResetShow" class="ghost">Load show</button>
+      </div>
+      <label class="check"><input type="checkbox" id="chkLoop" checked /> Loop show</label>
+    </section>
+
+    <section data-pane="create" class="pane">
+      <label class="field">Formation
+        <select id="selFormation"></select>
+      </label>
+      <label class="field" id="textField">Text
+        <input id="inpText" maxlength="28" value="HELLO" placeholder="Your message (use | for a new line)" />
+      </label>
+      <div class="field" id="imageField" hidden>
+        <label class="file-btn">Choose image / logo…
+          <input type="file" id="inpImage" accept="image/*" />
+        </label>
+        <img id="imgPreview" alt="" hidden />
+        <p class="hint">Bright parts of the image become drones. Logos on dark or transparent backgrounds work best.</p>
+      </div>
+      <label class="field">Light effect
+        <select id="selEffect"></select>
+      </label>
+      <div class="grid2">
+        <label class="field">Lasers
+          <select id="selLaser"></select>
+        </label>
+        <label class="field">Fireworks
+          <select id="selFireworks"></select>
+        </label>
+      </div>
+      <label class="field">Fire balloons (မီးပုံးပျံ)
+        <select id="selBalloons"></select>
+      </label>
+      <div class="field">Colors
+        <div id="palettes" class="swatches"></div>
+      </div>
+      <label class="field">Duration <span id="durVal">8s</span>
+        <input type="range" id="rngDur" min="4" max="24" value="8" />
+      </label>
+      <div class="row">
+        <button id="btnPreview" class="ghost">Preview</button>
+        <button id="btnAdd" class="primary">Add to show</button>
+      </div>
+    </section>
+
+    <section data-pane="music" class="pane">
+      <div class="grid2">
+        <button id="btnDemoBeat">▶ Demo beat</button>
+        <label class="file-btn">♫ Music file…
+          <input type="file" id="inpAudio" accept="audio/*" />
+        </label>
+        <button id="btnMic">🎤 Microphone</button>
+        <button id="btnStopAudio" class="ghost">■ Stop</button>
+      </div>
+      <div id="audioStatus" class="hint">No music playing.</div>
+      <canvas id="meter" width="560" height="110"></canvas>
+      <label class="check"><input type="checkbox" id="chkReact" checked /> Lights react to music</label>
+      <label class="check"><input type="checkbox" id="chkBoom" checked /> Firework sounds</label>
+      <label class="field">Sensitivity
+        <input type="range" id="rngSens" min="0" max="2" step="0.05" value="1" />
+      </label>
+    </section>
+
+    <section data-pane="view" class="pane">
+      <div class="field">Camera
+        <div class="grid2" id="camButtons">
+          <button data-cam="riverbank">Riverbank</button>
+          <button data-cam="aerial">Aerial</button>
+          <button data-cam="rooftop">Rooftop</button>
+          <button data-cam="bridge">Bridge</button>
+          <button data-cam="pagoda">Shwedagon</button>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="chkOrbit" /> Auto-orbit camera</label>
+      <label class="check"><input type="checkbox" id="chkSpots" checked /> Ground spotlights</label>
+      <label class="check"><input type="checkbox" id="chkWater" checked /> River reflections</label>
+      <label class="check"><input type="checkbox" id="chkLasers" checked /> Lasers</label>
+      <label class="check"><input type="checkbox" id="chkFireworks" checked /> Fireworks</label>
+      <label class="check"><input type="checkbox" id="chkMoon" checked /> Full moon</label>
+      <label class="check"><input type="checkbox" id="chkPagoda" checked /> Shwedagon pagoda</label>
+      <label class="check"><input type="checkbox" id="chkBalloons" checked /> မီးပုံးပျံ Fire balloons</label>
+      <label class="check"><input type="checkbox" id="chkLanterns" checked /> Small sky lanterns</label>
+      <label class="field">Glow strength
+        <input type="range" id="rngBloom" min="0" max="2.5" step="0.05" value="0.9" />
+      </label>
+      <label class="field">Drone count
+        <select id="selCount">
+          <option value="500">500</option>
+          <option value="800">800 (phone default)</option>
+          <option value="1000">1,000</option>
+          <option value="1500">1,500</option>
+          <option value="2500">2,500</option>
+          <option value="4000">4,000</option>
+        </select>
+      </label>
+      <div class="field install-box">Install app
+        <button id="btnInstall2" class="primary" hidden>📲 Install SkyLights on this device</button>
+        <p id="installHint" class="hint"></p>
+      </div>
+      <p class="hint">Keys: Space play/pause · ← → steps · G fireworks · B fire balloon · R record · H hide UI · F fullscreen. Drag to orbit, scroll/pinch to zoom.</p>
+    </section>
+    <section data-pane="video" class="pane">
+      <p class="hint">Record the show as a video to share. Only the 3D view and its sound are recorded — not these controls.</p>
+      <label class="field">Video size
+        <select id="selVidSize">
+          <option value="1920x1080">1080p landscape (YouTube, Facebook)</option>
+          <option value="1080x1920">1080p vertical (TikTok, Reels, Stories)</option>
+          <option value="1280x720">720p landscape (smaller file)</option>
+          <option value="screen">Same as my screen</option>
+        </select>
+      </label>
+      <label class="field">Frame rate
+        <select id="selVidFps">
+          <option value="30">30 fps</option>
+          <option value="60">60 fps (smoother, bigger file)</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="chkVidAudio" checked /> Include music &amp; firework sound</label>
+      <details class="title-box" open>
+        <summary>Title card</summary>
+        <label class="check"><input type="checkbox" id="chkTitleIntro" /> Opening title card</label>
+        <label class="check"><input type="checkbox" id="chkTitleOutro" /> Closing card at the end</label>
+        <label class="check"><input type="checkbox" id="chkTitleCredit" /> Small credit in the corner</label>
+        <label class="field">Title <input id="tcTitle" maxlength="40" placeholder="Use | for two lines" /></label>
+        <label class="field">Subtitle <input id="tcSubtitle" maxlength="60" /></label>
+        <label class="field">Date line <input id="tcDate" maxlength="50" /></label>
+        <label class="field">Presented by <input id="tcPresenter" maxlength="50" placeholder="Your name or organization" /></label>
+        <label class="field">Closing message <input id="tcEndTitle" maxlength="40" /></label>
+        <label class="field">Closing line <input id="tcEndSub" maxlength="60" /></label>
+        <div class="grid2">
+          <button id="btnTcIntro" class="ghost">Preview opening</button>
+          <button id="btnTcOutro" class="ghost">Preview closing</button>
+        </div>
+        <button id="btnTcReset" class="ghost">Reset title texts</button>
+      </details>
+      <div class="grid2">
+        <button id="btnRecShow" class="primary">⏺ Record whole show</button>
+        <button id="btnRecNow">⏺ Record from now</button>
+      </div>
+      <div id="recStatus" class="hint"></div>
+      <div id="recResult" class="rec-result" hidden>
+        <video id="recVideo" controls playsinline></video>
+        <div class="grid2">
+          <a id="recDownload" class="btn-link primary" download>⬇ Download</a>
+          <button id="recShare">↗ Share…</button>
+        </div>
+      </div>
+      <p class="hint">Tip: keep this tab visible while recording — browsers pause hidden tabs. To add music, start it in the Music tab first.</p>
+    </section>
+  </aside>
+  <div id="recBadge" class="rec-badge" hidden>● REC <span id="recTime">0:00</span></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
