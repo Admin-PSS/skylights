@@ -1,8 +1,9 @@
 name: Deploy to GitHub Pages
 
-# Run manually (Actions tab → "Deploy to GitHub Pages" → Run workflow) when you are ready to launch the demo.
-# To deploy automatically on every push later, add:  push: { branches: [main] }
+# Deploys automatically on every push to main. Can also be run by hand from the Actions tab.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

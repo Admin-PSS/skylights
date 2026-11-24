@@ -1,5 +1,7 @@
 # SkyLights — virtual drone light show
 
+**Live demo:** https://admin-pss.github.io/skylights/ — every push to `main` is built and deployed automatically (GitHub Actions → Pages).
+
 A browser app that simulates a drone light show over a virtual night-time city.
 
 ## Run
