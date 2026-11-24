@@ -15,6 +15,9 @@ export const PALETTES = {
   saffron: { name: 'Saffron', colors: ['#ff9f1c', '#ffd166', '#ff5e00'] },
   moon: { name: 'Moonlight', colors: ['#fff6d6', '#ffe39a', '#ffffff'] },
   robe: { name: 'Robe saffron', colors: ['#ff8a1c', '#e0531a', '#ffb347'] },
+  xmas: { name: 'Christmas', colors: ['#e0262e', '#1fa64a', '#ffd45a'] },
+  snow: { name: 'Snow', colors: ['#ffffff', '#cfe9ff', '#8fc8ff'] },
+  candy: { name: 'Candy', colors: ['#ff2d55', '#ffffff', '#ff8fab'] },
 };
 
 const cache = new Map();

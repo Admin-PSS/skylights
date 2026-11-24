@@ -146,25 +146,70 @@ export class AudioEngine {
   }
 
   // ---------- Demo beat (synthesized, no files needed) ----------
-  startDemo() {
+  /** style: 'festival' (122 BPM groove) or 'jingle' (Jingle Bells, a public-domain 1857 melody, with sleigh bells). */
+  startDemo(style = 'festival') {
     this.stop();
     this._ensure();
     this.demoOut = this.ctx.createGain();
     this.demoOut.gain.value = 0.55;
     this.demoOut.connect(this.bus);
-    this.tempo = 122;
+    this.style = style;
+    this.tempo = style === 'jingle' ? 132 : 122;
+    this.loopLen = style === 'jingle' ? 256 : 64;
     this.step = 0;
     this.nextTime = this.ctx.currentTime + 0.1;
     this.timer = setInterval(() => this._schedule(), 25);
-    this._set('demo', 'Playing: demo beat (122 BPM)');
+    this._set('demo', style === 'jingle' ? 'Playing: Jingle Bells demo (132 BPM)' : 'Playing: demo beat (122 BPM)');
+  }
+
+  _jingleStep(s, t, sp) {
+    if (!this._melody) {
+      // [midi, length in 16ths] — chorus of Jingle Bells
+      const A = [[64, 4], [64, 4], [64, 8], [64, 4], [64, 4], [64, 8], [64, 4], [67, 4], [60, 6], [62, 2], [64, 16],
+        [65, 4], [65, 4], [65, 6], [65, 2], [65, 4], [64, 4], [64, 4], [64, 2], [64, 2]];
+      const end1 = [[64, 4], [62, 4], [62, 4], [64, 4], [62, 8], [67, 8]];
+      const end2 = [[67, 4], [67, 4], [65, 4], [62, 4], [60, 16]];
+      const seq = [...A, ...end1, ...A, ...end2];
+      this._melody = new Map();
+      let pos = 0;
+      for (const [m, d] of seq) { this._melody.set(pos, [m, d]); pos += d; }
+      this._roots = [48, 48, 48, 48, 41, 48, 50, 43, 48, 48, 48, 48, 41, 48, 43, 48];
+    }
+    const inBar = s % 16, bar = Math.floor(s / 16) % 16;
+    const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    if (inBar === 0 || inBar === 8) this._kick(t);
+    if (inBar === 4 || inBar === 12) this._snare(t);
+    if (s % 2 === 0) this._sleigh(t);
+    if (inBar % 4 === 0) {
+      const root = this._roots[bar] + (inBar === 4 || inBar === 12 ? 7 : 0);
+      this._bass(t, hz(root) * 2, sp * 3);
+    }
+    const note = this._melody.get(s);
+    if (note) this._bellNote(t, hz(note[0] + 12), Math.min(1.2, note[1] * sp * 1.4));
+  }
+
+  _sleigh(t) {
+    for (let k = 0; k < 2; k++) this._noise(t + k * 0.03, 0.04, 'highpass', 6500 + Math.random() * 2000, 0.07);
+  }
+
+  _bellNote(t, f, dur) {
+    [[1, 0.16], [2, 0.06], [3.01, 0.03]].forEach(([mult, peak]) => {
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f * mult;
+      o.connect(this._env(t, peak, 0.004, 0.25 + dur));
+      o.start(t);
+      o.stop(t + dur + 0.35);
+    });
   }
 
   _schedule() {
     const spStep = 60 / this.tempo / 4;
     while (this.nextTime < this.ctx.currentTime + 0.12) {
-      this._playStep(this.step, this.nextTime, spStep);
+      if (this.style === 'jingle') this._jingleStep(this.step, this.nextTime, spStep);
+      else this._playStep(this.step, this.nextTime, spStep);
       this.nextTime += spStep;
-      this.step = (this.step + 1) % 64;
+      this.step = (this.step + 1) % (this.loopLen || 64);
     }
   }
 

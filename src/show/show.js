@@ -1,7 +1,6 @@
 import { buildFormation, FORMATIONS } from '../drones/formations.js';
 import { EFFECTS, PALETTES, paletteColors } from '../drones/effects.js';
 
-const STORAGE_KEY = 'skylights.show.v2';
 
 let uid = 1;
 const step = (formation, effect, palette, duration, extra = {}) => ({
@@ -31,6 +30,26 @@ export function festivalShow() {
   ];
 }
 
+/** Christmas & New Year. The greeting step personalises itself: “MERRY CHRISTMAS | MYA”. */
+export function christmasShow() {
+  return [
+    step('launch', 'solid', 'snow', 4),
+    step('lift', 'wave', 'xmas', 6, { laser: 'fan' }),
+    step('snowflake', 'twinkle', 'snow', 8),
+    step('text', 'glitter', 'xmas', 9, { text: 'MERRY CHRISTMAS', greet: 'MERRY CHRISTMAS|{to}', laser: 'fan' }),
+    step('xmastree', 'glitter', 'xmas', 12, { laser: 'target', fireworks: 'some' }),
+    step('santa', 'image', 'xmas', 11),
+    step('gift', 'glitter', 'xmas', 8, { laser: 'web' }),
+    step('snowman', 'image', 'snow', 8),
+    step('bells', 'glitter', 'xmas', 8, { fireworks: 'some' }),
+    step('candycane', 'image', 'candy', 7),
+    step('text', 'glitter', 'xmas', 8, { text: 'ပျော်ရွှင်ဖွယ်|ခရစ္စမတ်' }),
+    step('text', 'pulse', 'royal', 9, { text: 'HAPPY NEW YEAR|2027', laser: 'fan', fireworks: 'lots' }),
+    step('burst', 'pulse', 'xmas', 8, { laser: 'fan', fireworks: 'lots' }),
+    step('land', 'solid', 'snow', 7),
+  ];
+}
+
 export function demoShow() {
   return [
     step('launch', 'solid', 'ice', 4),
@@ -50,17 +69,12 @@ export function demoShow() {
   ];
 }
 
-export const PRESETS = {
-  tazaungdaing: { name: '🌕 Tazaungdaing Full Moon', build: festivalShow },
-  city: { name: '🏙 City lights demo', build: demoShow },
-};
-
 export const LASER_MODES = { off: 'Off', fan: 'Sweeping fans', target: 'Aim at drones', web: 'String-art web' };
 export const FIREWORK_MODES = { off: 'Off', some: 'Some', lots: 'Finale (lots)' };
 export const BALLOON_MODES = { few: 'A few drifting', launch: 'Mass launch', off: 'None' };
 
 export function stepLabel(s) {
-  if (s.formation === 'text') return `“${s.text}”`;
+  if (s.formation === 'text') return `“${s.text.replace(/\|/g, ' ')}”${s.greet ? ' + name' : ''}`;
   return FORMATIONS[s.formation]?.name ?? s.formation;
 }
 export function stepSub(s) {
@@ -75,7 +89,11 @@ export function stepSub(s) {
 export class ShowController {
   constructor(swarm) {
     this.swarm = swarm;
-    this.steps = this._load() || festivalShow();
+    this.themeId = 'tazaungdaing';
+    this.build = festivalShow;
+    this.defaults = { balloons: 'few' };
+    this.greeting = { to: '', from: '' };
+    this.steps = [];
     this.index = -1;
     this.playing = true;
     this.loop = true;
@@ -91,10 +109,33 @@ export class ShowController {
   on(fn) { this.listeners.add(fn); }
   _emit(type) { this.listeners.forEach((fn) => fn(type, this)); }
 
+  /** Switch occasion: load this theme's saved show (or its default) and its scene defaults. */
+  setTheme(id, build, defaults = {}) {
+    this.themeId = id;
+    this.build = build;
+    this.defaults = { balloons: 'few', ...defaults };
+    this.steps = this._load() || build();
+    this.index = -1;
+    this._emit('list');
+  }
+
+  /** Personal greeting (“To” / “From”); greeting steps re-render with the name. */
+  setGreeting(to = '', from = '') {
+    this.greeting = { to: to.trim(), from: from.trim() };
+    if (this.current?.greet) this._show(this.current);
+    this._emit('list');
+  }
+
+  /** The text a step shows, with the greeting name filled in where the step has one. */
+  stepText(s) {
+    return s.greet && this.greeting.to ? s.greet.replace('{to}', this.greeting.to.toUpperCase()) : s.text;
+  }
+
   async _formation(s) {
     const img = s.image ? `${s.image.length}:${s.image.slice(-48)}` : '';
-    const key = `${s.formation}|${s.text || ''}|${img}|${this.swarm.count}`;
-    if (!this.cache.has(key)) this.cache.set(key, await buildFormation(s, this.swarm.count));
+    const text = this.stepText(s) || '';
+    const key = `${s.formation}|${text}|${img}|${this.swarm.count}`;
+    if (!this.cache.has(key)) this.cache.set(key, await buildFormation({ ...s, text }, this.swarm.count));
     return this.cache.get(key);
   }
 
@@ -115,7 +156,7 @@ export class ShowController {
 
   _applyLook(s) {
     this.current = s;
-    this.look = { effect: s.effect, colors: paletteColors(s.palette), laser: s.laser || 'off', fireworks: s.fireworks || 'off', balloons: s.balloons || 'few', duration: s.duration };
+    this.look = { effect: s.effect, colors: paletteColors(s.palette), laser: s.laser || 'off', fireworks: s.fireworks || 'off', balloons: s.balloons || this.defaults.balloons, duration: s.duration };
   }
 
   async _show(s, now) {
@@ -180,8 +221,9 @@ export class ShowController {
     this._save();
     this._emit('list');
   }
-  reset(preset = 'tazaungdaing') {
-    this.steps = (PRESETS[preset] || PRESETS.tazaungdaing).build();
+  /** Back to this theme's original show. */
+  reset() {
+    this.steps = this.build();
     this._save();
     this._emit('list');
     this.goTo(0);
@@ -206,14 +248,19 @@ export class ShowController {
     return s ? Math.min(1, this.stepTime / s.duration) : 0;
   }
 
+  get _key() {
+    // the Tazaungdaing show keeps its original storage key so earlier edits survive
+    return this.themeId === 'tazaungdaing' ? 'skylights.show.v2' : `skylights.show.v2.${this.themeId}`;
+  }
+
   _save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.steps.map(({ id, ...rest }) => rest)));
+      localStorage.setItem(this._key, JSON.stringify(this.steps.map(({ id, ...rest }) => rest)));
     } catch { /* storage may be unavailable or full — the show still works */ }
   }
   _load() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(this._key);
       if (!raw) return null;
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr) || !arr.length) return null;

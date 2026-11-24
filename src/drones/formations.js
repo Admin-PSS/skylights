@@ -25,6 +25,13 @@ export const FORMATIONS = {
   balloon: { name: 'Fire balloon', icon: '🎈' },
   loom: { name: 'Weaving loom (Matho Thingan)', icon: '🧵' },
   robe: { name: 'Robe offering (Thingan)', icon: '🟧' },
+  xmastree: { name: 'Christmas tree', icon: '🎄' },
+  santa: { name: 'Santa’s sleigh', icon: '🛷' },
+  snowman: { name: 'Snowman', icon: '⛄' },
+  gift: { name: 'Gift box', icon: '🎁' },
+  bells: { name: 'Christmas bells', icon: '🔔' },
+  snowflake: { name: 'Snowflake', icon: '❄' },
+  candycane: { name: 'Candy cane', icon: '🍬' },
   land: { name: 'Landing', icon: '▁' },
 };
 
@@ -42,6 +49,7 @@ function make(pts, opts = {}) {
     brightness: opts.brightness ?? 1,
     radius: R,
     roles: opts.roles || null,
+    drift: opts.drift || null,
     meta: opts.meta || null,
   };
 }
@@ -571,6 +579,209 @@ function robeOffering(N) {
   return canvasPoints(c, N, 180, true);
 }
 
+// ---------------- Christmas shapes ----------------
+
+/** A 3D drone Christmas tree: layered cone, gold garland spiral, ornaments, trunk and a star. */
+function xmasTree(N) {
+  const pts = [], cols = [];
+  const add = (x, y, z, c) => { pts.push(x, y, z); cols.push(c[0], c[1], c[2]); };
+  const H = 165, R = 72, y0 = -108; // star stays inside the riverbank view
+  const starN = Math.floor(N * 0.07), garN = Math.floor(N * 0.2), ornN = Math.floor(N * 0.06), trunkN = Math.floor(N * 0.03);
+  const bodyN = N - starN - garN - ornN - trunkN;
+  const rnd = mulberry32(25);
+  for (let i = 0; i < bodyN; i++) {
+    const t = Math.sqrt((i + 0.5) / bodyN); // 0 at the top, 1 at the base; area grows with t²
+    const tier = 0.86 + 0.14 * ((t * 5) % 1); // layered branches
+    const r = R * t * tier, a = i * 2.399963;
+    const g = 0.35 + 0.4 * rnd();
+    add(Math.cos(a) * r, y0 + H * (1 - t), Math.sin(a) * r, [0.04, g, 0.1]);
+  }
+  for (let k = 0; k < garN; k++) {
+    const t = k / garN, a = t * Math.PI * 2 * 5.5;
+    const r = R * t * 1.05 + 1.5;
+    add(Math.cos(a) * r, y0 + H * (1 - t), Math.sin(a) * r, [1.3, 0.85, 0.2]);
+  }
+  const orn = [[1.4, 0.08, 0.06], [0.25, 0.45, 1.5], [1.3, 1.3, 1.3], [1.4, 0.9, 0.15]];
+  for (let k = 0; k < ornN; k++) {
+    const t = 0.15 + 0.85 * rnd(), a = rnd() * Math.PI * 2, r = R * t * 1.03;
+    add(Math.cos(a) * r, y0 + H * (1 - t), Math.sin(a) * r, orn[k % orn.length]);
+  }
+  for (let k = 0; k < trunkN; k++) {
+    const a = rnd() * Math.PI * 2;
+    add(Math.cos(a) * 9, y0 - 4 - rnd() * 16, Math.sin(a) * 9, [0.45, 0.22, 0.07]);
+  }
+  // star (in the x/y plane so it faces the viewer as the tree turns)
+  const inStar = (x, y) => {
+    let inside = false;
+    const P = [];
+    for (let k = 0; k < 10; k++) {
+      const r = k % 2 ? 8 : 19, a = -Math.PI / 2 + (k * Math.PI) / 5;
+      P.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      const [xi, yi] = P[i], [xj, yj] = P[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  let made = 0, guard = 0;
+  while (made < starN && guard++ < starN * 50) {
+    const x = (rnd() - 0.5) * 40, y = (rnd() - 0.5) * 40;
+    if (!inStar(x, y)) continue;
+    add(x, y0 + H + 14 - y, 0, [1.8, 1.35, 0.35]);
+    made++;
+  }
+  return make(pts, { colors: new Float32Array(cols), spin: 0.35 });
+}
+
+/** Santa in his sleigh pulled by three reindeer (Rudolph leads); flies across the sky. */
+function santaSleigh(N) {
+  const [c, g] = blankCanvas(380, 210);
+  const brown = '#a8692e', antler = '#e0b06a', gold = '#ffd45a';
+  // sparkle trail behind
+  for (let k = 0; k < 18; k++) ell(g, 4 + k * 1.6 + Math.random() * 18, 95 + Math.sin(k) * 30, 1.8, 1.8, '#fff1c4');
+  // runner
+  g.strokeStyle = gold; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(26, 178); g.lineTo(140, 178); g.quadraticCurveTo(160, 178, 156, 160); g.stroke();
+  [[50, 160, 50, 178], [118, 160, 118, 178]].forEach(([a, b, cc, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(cc, d); g.stroke(); });
+  // sack
+  ell(g, 44, 104, 20, 26, '#9c6a32');
+  g.fillStyle = gold; g.fillRect(36, 78, 16, 5);
+  // Santa
+  ell(g, 78, 104, 24, 22, '#e0262e');
+  g.fillStyle = '#ffffff'; g.fillRect(56, 120, 46, 6);
+  ell(g, 84, 72, 11, 11, '#ffd2a8');
+  ell(g, 86, 84, 12, 10, '#ffffff');
+  g.fillStyle = '#e0262e'; g.beginPath(); g.moveTo(72, 66); g.lineTo(96, 66); g.lineTo(104, 46); g.closePath(); g.fill();
+  g.fillStyle = '#ffffff'; g.fillRect(71, 64, 27, 5);
+  ell(g, 106, 44, 4.5, 4.5, '#ffffff');
+  // sleigh body
+  g.fillStyle = '#d4202a';
+  g.beginPath(); g.moveTo(30, 112); g.lineTo(126, 112); g.quadraticCurveTo(146, 112, 138, 138); g.lineTo(128, 162);
+  g.lineTo(48, 162); g.quadraticCurveTo(26, 152, 30, 112); g.fill();
+  g.strokeStyle = gold; g.lineWidth = 4; g.beginPath(); g.moveTo(32, 114); g.lineTo(126, 114); g.stroke();
+  ell(g, 84, 138, 9, 9, gold);
+  // harness
+  g.strokeStyle = gold; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(136, 132); g.quadraticCurveTo(220, 150, 330, 112); g.stroke();
+  // reindeer
+  [[190, 0], [258, 1], [326, 2]].forEach(([x, i]) => {
+    const y = 120 - i * 6;
+    ell(g, x, y, 25, 11, brown);
+    g.strokeStyle = brown; g.lineWidth = 5;
+    [[-16, 1.2], [-8, 0.5], [10, -0.6], [18, -1.1]].forEach(([dx, sw]) => {
+      g.beginPath(); g.moveTo(x + dx, y + 6); g.lineTo(x + dx + sw * 10, y + 30); g.stroke();
+    });
+    g.beginPath(); g.moveTo(x + 18, y - 4); g.lineTo(x + 28, y - 20); g.stroke(); // neck
+    ell(g, x + 32, y - 23, 9, 7, brown, -0.3);
+    g.strokeStyle = antler; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(x + 28, y - 29); g.lineTo(x + 22, y - 44); g.moveTo(x + 25, y - 37); g.lineTo(x + 16, y - 40);
+    g.moveTo(x + 32, y - 30); g.lineTo(x + 34, y - 46); g.moveTo(x + 33, y - 39); g.lineTo(x + 41, y - 44); g.stroke();
+    ell(g, x - 25, y - 6, 4, 3, '#f1e2c8');
+    if (i === 2) ell(g, x + 41, y - 22, 4.5, 4.5, '#ff2020'); // Rudolph
+  });
+  const f = canvasPoints(c, N, 230, true);
+  f.drift = { x0: -70, vx: 12 };
+  return f;
+}
+
+function snowman(N) {
+  const [c, g] = blankCanvas(240, 300);
+  ell(g, 120, 290, 110, 8, '#dff1ff');
+  ell(g, 120, 228, 62, 58, '#d6e2f0');
+  ell(g, 120, 142, 46, 42, '#dfe9f5');
+  ell(g, 120, 72, 32, 31, '#e4edf7');
+  g.strokeStyle = '#a8692e'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(80, 135); g.lineTo(32, 98); g.moveTo(52, 114); g.lineTo(38, 132);
+  g.moveTo(160, 135); g.lineTo(208, 98); g.moveTo(188, 114); g.lineTo(204, 128); g.stroke();
+  g.fillStyle = '#5b6b8c'; g.fillRect(80, 38, 80, 8); g.fillRect(94, 2, 52, 38);
+  g.fillStyle = '#e0262e'; g.fillRect(94, 28, 52, 8);
+  ell(g, 108, 66, 4.5, 4.5, '#4fa3ff'); ell(g, 132, 66, 4.5, 4.5, '#4fa3ff');
+  g.fillStyle = '#ff8a1c'; g.beginPath(); g.moveTo(118, 74); g.lineTo(152, 80); g.lineTo(118, 82); g.fill();
+  for (let k = -2; k <= 2; k++) ell(g, 120 + k * 7, 90 + Math.abs(k) * -1.5 + 2, 2, 2, '#ffd45a');
+  g.fillStyle = '#e0262e'; g.fillRect(82, 100, 76, 13);
+  g.fillStyle = '#1fa64a'; g.fillRect(128, 106, 15, 44);
+  g.fillStyle = '#e0262e'; [114, 124, 134].forEach((y) => g.fillRect(128, y, 15, 5));
+  [130, 152, 174].forEach((y) => ell(g, 120, y, 5, 5, '#ffd45a'));
+  return canvasPoints(c, N, 165, true);
+}
+
+function giftBox(N) {
+  const [c, g] = blankCanvas(260, 260);
+  g.fillStyle = '#d4202a'; g.fillRect(40, 112, 180, 132);
+  g.fillStyle = '#ff3b44'; g.fillRect(30, 86, 200, 32);
+  g.fillStyle = '#ffd45a'; g.fillRect(118, 86, 24, 158); g.fillRect(40, 164, 180, 20);
+  ell(g, 100, 66, 34, 20, '#ffd45a', -0.45); ell(g, 160, 66, 34, 20, '#ffd45a', 0.45);
+  ell(g, 100, 66, 18, 8, '#000', -0.45); ell(g, 160, 66, 18, 8, '#000', 0.45);
+  ell(g, 130, 78, 12, 11, '#ffe08a');
+  g.fillStyle = '#ffd45a';
+  g.beginPath(); g.moveTo(124, 84); g.lineTo(100, 112); g.lineTo(112, 114); g.lineTo(130, 88); g.fill();
+  g.beginPath(); g.moveTo(136, 84); g.lineTo(160, 112); g.lineTo(148, 114); g.lineTo(130, 88); g.fill();
+  for (let k = 0; k < 12; k++) ell(g, 52 + (k % 4) * 52, 130 + Math.floor(k / 4) * 40 + (k % 2) * 8, 3, 3, '#ffffff');
+  return canvasPoints(c, N, 170, true);
+}
+
+function christmasBells(N) {
+  const [c, g] = blankCanvas(300, 260);
+  const bell = (cx, cy, rot) => {
+    // two separate bells, slightly smaller so they don't merge
+    g.save(); g.translate(cx, cy); g.rotate(rot); g.scale(0.86, 0.86);
+    g.fillStyle = '#ffc23a';
+    g.beginPath(); g.moveTo(-12, -60); g.bezierCurveTo(-46, -52, -42, 10, -56, 32); g.lineTo(56, 32);
+    g.bezierCurveTo(42, 10, 46, -52, 12, -60); g.closePath(); g.fill();
+    g.fillStyle = '#e09a1a'; g.fillRect(-60, 30, 120, 11);
+    g.fillStyle = '#fff0b0'; g.fillRect(-30, -30, 8, 46);
+    ell(g, 0, 50, 10, 10, '#ffe08a');
+    g.restore();
+  };
+  bell(92, 165, -0.28);
+  bell(208, 165, 0.28);
+  ell(g, 150, 72, 9, 9, '#e0262e');
+  ell(g, 126, 64, 24, 13, '#e0262e', -0.35); ell(g, 174, 64, 24, 13, '#e0262e', 0.35);
+  g.fillStyle = '#e0262e';
+  g.beginPath(); g.moveTo(146, 76); g.lineTo(126, 112); g.lineTo(136, 114); g.lineTo(150, 82); g.fill();
+  g.beginPath(); g.moveTo(154, 76); g.lineTo(174, 112); g.lineTo(164, 114); g.lineTo(150, 82); g.fill();
+  ell(g, 132, 92, 15, 7, '#1fa64a', 0.5); ell(g, 168, 92, 15, 7, '#1fa64a', -0.5);
+  ell(g, 146, 92, 4, 4, '#ff2020'); ell(g, 154, 94, 4, 4, '#ff2020');
+  return canvasPoints(c, N, 180, true);
+}
+
+function snowflake(N) {
+  const [c, g] = blankCanvas(260, 260);
+  g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineWidth = 9;
+  for (let k = 0; k < 6; k++) {
+    g.save(); g.translate(130, 130); g.rotate((k * Math.PI) / 3);
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -112); g.stroke();
+    [[-52, 30], [-82, 22]].forEach(([y, l]) => {
+      g.beginPath(); g.moveTo(0, y); g.lineTo(-l, y - l); g.moveTo(0, y); g.lineTo(l, y - l); g.stroke();
+    });
+    g.restore();
+  }
+  g.lineWidth = 6;
+  g.beginPath();
+  for (let k = 0; k <= 6; k++) {
+    const a = (k * Math.PI) / 3 + Math.PI / 6;
+    const x = 130 + Math.cos(a) * 24, y = 130 + Math.sin(a) * 24;
+    k ? g.lineTo(x, y) : g.moveTo(x, y);
+  }
+  g.stroke();
+  return canvasPoints(c, N, 190);
+}
+
+function candyCane(N) {
+  const [c, g] = blankCanvas(200, 300);
+  g.strokeStyle = '#ff2d55'; g.lineWidth = 34; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(128, 280); g.lineTo(128, 100); g.arc(88, 100, 40, 0, Math.PI, true); g.lineTo(48, 132); g.stroke();
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = '#ffffff';
+  for (let k = -12; k < 20; k++) {
+    g.save(); g.translate(0, k * 30); g.rotate(-0.55); g.fillRect(-60, 0, 400, 13); g.restore();
+  }
+  g.globalCompositeOperation = 'source-over';
+  ell(g, 152, 60, 8, 4, '#1fa64a', 0.6); ell(g, 160, 72, 8, 4, '#1fa64a', -0.2); ell(g, 150, 70, 3.5, 3.5, '#ff2020');
+  return canvasPoints(c, N, 130, true);
+}
+
 /** Build the formation for a show step. Returns a Promise (images decode asynchronously). */
 export async function buildFormation(step, N) {
   switch (step.formation) {
@@ -597,6 +808,13 @@ export async function buildFormation(step, N) {
     case 'balloon': return balloon(N);
     case 'loom': return loom(N);
     case 'robe': return robeOffering(N);
+    case 'xmastree': return xmasTree(N);
+    case 'santa': return santaSleigh(N);
+    case 'snowman': return snowman(N);
+    case 'gift': return giftBox(N);
+    case 'bells': return christmasBells(N);
+    case 'snowflake': return snowflake(N);
+    case 'candycane': return candyCane(N);
     default: return sphere(N);
   }
 }

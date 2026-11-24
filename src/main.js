@@ -16,6 +16,8 @@ import { createMoon, createLanterns } from './scene/festival.js';
 import { createShwedagon } from './scene/shwedagon.js';
 import { TitleCard } from './scene/titlecard.js';
 import { FireBalloons } from './scene/balloons.js';
+import { createChristmasScene } from './scene/christmas.js';
+import { THEMES, initialTheme, rememberThemeChoice } from './themes.js';
 import { DroneSwarm } from './drones/swarm.js';
 import { SHOW_CENTER } from './drones/formations.js';
 import { ShowController } from './show/show.js';
@@ -77,7 +79,10 @@ const lanterns = createLanterns(isMobile ? 50 : 90);
 const shwedagon = createShwedagon();
 const balloons = new FireBalloons(fireworks, isMobile ? { pool: 8, ambient: 3 } : { pool: 16, ambient: 6 });
 balloons.seed();
-scene.add(sky.group, moon.mesh, city.group, shwedagon.group, water.group, spots.group, lasers.group, fireworks.group, lanterns.points, balloons.group);
+const xmas = createChristmasScene(city.lots, { mobile: isMobile });
+xmas.snow.visible = false;
+xmas.decor.visible = false;
+scene.add(sky.group, moon.mesh, city.group, shwedagon.group, water.group, spots.group, lasers.group, fireworks.group, lanterns.points, balloons.group, xmas.snow, xmas.decor);
 lasers.setResolution(window.innerWidth, window.innerHeight);
 
 const swarm = new DroneSwarm(scene, settings.count, SHOW_CENTER);
@@ -163,9 +168,52 @@ function setCamera(name) {
   };
 }
 
+// ---------- Occasion themes ----------
+const params = new URLSearchParams(location.search);
+const themeListeners = new Set();
+function applyTheme(id, { manual = false } = {}) {
+  const th = THEMES[id] || THEMES.tazaungdaing;
+  settings.theme = id;
+  shwedagon.group.visible = th.scene.pagoda;
+  moon.mesh.visible = th.scene.moon;
+  lanterns.points.visible = th.scene.lanterns;
+  balloons.group.visible = th.scene.balloons !== 'off';
+  xmas.snow.visible = th.scene.snow;
+  xmas.decor.visible = th.scene.xmas;
+  show.setTheme(id, th.build, { balloons: th.scene.balloons });
+  // title-card texts follow the theme, but only when the theme changes (so the viewer's own edits stay)
+  if (titleCard.text.theme !== id) titleCard.set({ ...th.title, theme: id });
+  if (audio.mode === 'demo' && audio.style !== th.music) audio.startDemo(th.music);
+  if (manual) rememberThemeChoice(id);
+  themeListeners.forEach((fn) => fn(id, th));
+  return th;
+}
+applyTheme(initialTheme(params));
+// A personal greeting link: ?theme=christmas&to=Mya&from=Ko%20Aung
+if (params.get('to') || params.get('from')) {
+  const to = (params.get('to') || '').slice(0, 24), from = (params.get('from') || '').slice(0, 40);
+  show.setGreeting(to, from);
+  const th = THEMES[settings.theme];
+  titleCard.set({ title: to ? th.greeting.title.replace('{to}', to) : th.title.title, presenter: from });
+}
+
 // ---------- App API used by the UI ----------
 const app = {
-  show, audio, settings, titleCard,
+  show, audio, settings, titleCard, themes: THEMES,
+  onTheme: (fn) => themeListeners.add(fn),
+  async setTheme(id) {
+    const th = applyTheme(id, { manual: true });
+    await show.start();
+    show.setPlaying(true);
+    return th;
+  },
+  setGreeting(to, from) {
+    show.setGreeting(to, from);
+    const th = THEMES[settings.theme];
+    titleCard.set({ title: to ? th.greeting.title.replace('{to}', to) : th.title.title, presenter: from || titleCard.text.presenter });
+  },
+  setSnow: (on) => (xmas.snow.visible = on),
+  setXmasDecor: (on) => (xmas.decor.visible = on),
   setCamera,
   setOrbit: (on) => (controls.autoRotate = on),
   setSpotlights: (on) => (spots.group.visible = on),
@@ -242,6 +290,7 @@ function frame() {
   moon.update(camera);
   shwedagon.update(now, camera);
   lanterns.update(now, dt);
+  xmas.update(now);
 
   glowUniforms.uTime.value = now;
   sky.update(now, renderer.getPixelRatio());

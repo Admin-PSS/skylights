@@ -218,6 +218,7 @@ export function createCity() {
 
   return {
     group,
+    lots,
     update(t) {
       buildingMat.uniforms.uTime.value = t;
     },

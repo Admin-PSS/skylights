@@ -1,6 +1,7 @@
 import { FORMATIONS } from '../drones/formations.js';
 import { EFFECTS, PALETTES } from '../drones/effects.js';
-import { stepLabel, stepSub, PRESETS, LASER_MODES, FIREWORK_MODES, BALLOON_MODES } from '../show/show.js';
+import { stepLabel, stepSub, LASER_MODES, FIREWORK_MODES, BALLOON_MODES } from '../show/show.js';
+import { personalLink } from '../themes.js';
 import { ShowRecorder, pickFormat } from './recorder.js';
 import { DEFAULT_TITLE } from '../scene/titlecard.js';
 
@@ -66,9 +67,51 @@ export function initUI(app) {
     });
   };
   $('chkLoop').onchange = (e) => (show.loop = e.target.checked);
-  const selPreset = $('selPreset');
-  Object.entries(PRESETS).forEach(([id, p]) => selPreset.add(new Option(p.name, id)));
-  $('btnResetShow').onclick = () => show.reset(selPreset.value);
+  // ---------- Occasion themes ----------
+  const selTheme = $('selTheme');
+  Object.entries(app.themes).forEach(([id, t]) => selTheme.add(new Option(t.name, id)));
+  selTheme.value = app.settings.theme;
+  selTheme.onchange = () => app.setTheme(selTheme.value);
+  $('btnResetShow').onclick = () => show.reset();
+  const syncScene = (id, th) => {
+    selTheme.value = id;
+    $('chkMoon').checked = th.scene.moon;
+    $('chkPagoda').checked = th.scene.pagoda;
+    $('chkLanterns').checked = th.scene.lanterns;
+    $('chkBalloons').checked = th.scene.balloons !== 'off';
+    $('chkSnow').checked = th.scene.snow;
+    $('chkXmas').checked = th.scene.xmas;
+    fillTitleForm?.();
+  };
+  app.onTheme(syncScene);
+
+  // ---------- Personal greeting ----------
+  $('greetTo').value = show.greeting.to;
+  $('greetFrom').value = show.greeting.from;
+  if (show.greeting.to || show.greeting.from) $('greetBox').open = true;
+  const greetStatus = $('greetStatus');
+  $('btnGreetApply').onclick = () => {
+    app.setGreeting($('greetTo').value, $('greetFrom').value);
+    const i = show.steps.findIndex((s) => s.greet);
+    if (i >= 0) { show.goTo(i); show.setPlaying(true); }
+    fillTitleForm();
+  };
+  $('btnGreetShare').onclick = async () => {
+    const to = $('greetTo').value.trim(), from = $('greetFrom').value.trim();
+    app.setGreeting(to, from);
+    fillTitleForm();
+    const link = personalLink(app.settings.theme, to, from);
+    const box = $('greetLink');
+    box.value = link;
+    box.hidden = false;
+    const th = app.themes[app.settings.theme];
+    const text = to ? `${th.greeting.title.replace('{to}', to)}! ✨` : `${th.title.title}! ✨`;
+    try {
+      if (navigator.share) { await navigator.share({ title: 'SkyLights', text, url: link }); greetStatus.textContent = 'Shared.'; return; }
+    } catch (e) { if (e?.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(link); greetStatus.textContent = 'Link copied — paste it into a message or post.'; }
+    catch { box.select(); greetStatus.textContent = 'Select the link above and copy it.'; }
+  };
 
   const caption = $('caption');
   const setCaption = () => {
@@ -164,7 +207,7 @@ export function initUI(app) {
     $('btnDemoBeat').classList.toggle('on', mode === 'demo');
     $('btnMic').classList.toggle('on', mode === 'mic');
   };
-  $('btnDemoBeat').onclick = () => (audio.mode === 'demo' ? audio.stop() : audio.startDemo());
+  $('btnDemoBeat').onclick = () => (audio.mode === 'demo' ? audio.stop() : audio.startDemo(app.themes[app.settings.theme].music));
   $('btnMic').onclick = () => (audio.mode === 'mic' ? audio.stop() : audio.startMic());
   $('btnStopAudio').onclick = () => audio.stop();
   $('inpAudio').onchange = (e) => {
@@ -207,6 +250,8 @@ export function initUI(app) {
   $('chkPagoda').onchange = (e) => app.setPagoda(e.target.checked);
   $('chkLanterns').onchange = (e) => app.setLanterns(e.target.checked);
   $('chkBalloons').onchange = (e) => app.setBalloons(e.target.checked);
+  $('chkSnow').onchange = (e) => app.setSnow(e.target.checked);
+  $('chkXmas').onchange = (e) => app.setXmasDecor(e.target.checked);
   $('btnFire').onclick = () => app.fireVolley();
   const selCount = $('selCount');
   selCount.value = String(app.settings.count);
@@ -225,7 +270,7 @@ export function initUI(app) {
   Object.entries(tcChecks).forEach(([id, key]) => ($(id).onchange = (e) => tc.set({ [key]: e.target.checked })));
   $('btnTcIntro').onclick = () => tc.play('intro', 3.5);
   $('btnTcOutro').onclick = () => tc.play('outro', 3.5);
-  $('btnTcReset').onclick = () => { tc.set({ ...DEFAULT_TITLE, presenter: tc.text.presenter }); fillTitleForm(); };
+  $('btnTcReset').onclick = () => { tc.set({ ...DEFAULT_TITLE, ...app.themes[app.settings.theme].title, presenter: tc.text.presenter }); fillTitleForm(); };
 
   // ---------- Video recording ----------
   const recorder = new ShowRecorder(document.getElementById('scene'), audio);
@@ -365,6 +410,7 @@ export function initUI(app) {
 
   renderList();
   syncPlay();
+  syncScene(app.settings.theme, app.themes[app.settings.theme]);
 
   const bar = $('progressBar');
   return {

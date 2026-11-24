@@ -110,7 +110,7 @@ export class DroneSwarm {
   _targetWorld(f, k, out, o) {
     const lx = f.points[k * 3], ly = f.points[k * 3 + 1], lz = f.points[k * 3 + 2];
     const ct = Math.cos(f.tilt), st = Math.sin(f.tilt);
-    out[o] = this.center.x + lx;
+    out[o] = this.center.x + lx + (f.drift ? f.drift.x0 : 0);
     out[o + 1] = this.center.y + ly * ct - lz * st;
     out[o + 2] = this.center.z + ly * st + lz * ct;
   }
@@ -217,6 +217,8 @@ export class DroneSwarm {
     const ct = Math.cos(f.tilt), st = Math.sin(f.tilt);
     const { x: cx, y: cy, z: cz } = this.center;
     const elapsed = now - this.transStart;
+    const driftX = f.drift ? f.drift.x0 + f.drift.vx * Math.max(0, elapsed) : 0;
+    const driftY = f.drift ? Math.sin(elapsed * 1.8) * 4 : 0;
     const effect = (EFFECTS[look.effect] || EFFECTS.palette).fn;
     const d = this._d;
     d.t = now; d.pal = look.colors; d.shift = look.shift; d.R = f.radius; d.hasBase = this.hasBase;
@@ -237,8 +239,8 @@ export class DroneSwarm {
         if (f.wave) lz += Math.sin(lx * 0.045 + now * 2.2) * 9 + Math.sin(ly * 0.05 + lx * 0.02 + now * 1.4) * 4;
         const x = lx * cs + lz * sn;
         const z = -lx * sn + lz * cs;
-        tx = cx + x;
-        ty = cy + ly * ct - z * st;
+        tx = cx + x + driftX;
+        ty = cy + ly * ct - z * st + driftY;
         tz = cz + ly * st + z * ct;
       } else {
         tx = S[i3]; ty = S[i3 + 1]; tz = S[i3 + 2];

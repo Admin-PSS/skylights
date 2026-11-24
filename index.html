@@ -65,11 +65,25 @@
     <section data-pane="show" class="pane active">
       <p class="hint">Click a step to jump to it. The show loops automatically.</p>
       <ol id="stepList" class="steps"></ol>
+      <label class="field">Occasion
+        <select id="selTheme"></select>
+      </label>
+      <details class="title-box" id="greetBox">
+        <summary>Personal greeting</summary>
+        <p class="hint">Put a name in the sky and on the title card, then share a link that plays this greeting for them.</p>
+        <label class="field">To <input id="greetTo" maxlength="24" placeholder="e.g. Mya & family" /></label>
+        <label class="field">From <input id="greetFrom" maxlength="40" placeholder="Your name" /></label>
+        <div class="grid2">
+          <button id="btnGreetApply" class="ghost">Show greeting</button>
+          <button id="btnGreetShare" class="primary">Share link…</button>
+        </div>
+        <input id="greetLink" readonly hidden />
+        <p id="greetStatus" class="hint"></p>
+      </details>
       <div class="row">
-        <select id="selPreset"></select>
-        <button id="btnResetShow" class="ghost">Load show</button>
+        <label class="check"><input type="checkbox" id="chkLoop" checked /> Loop show</label>
+        <button id="btnResetShow" class="ghost">Reset this show</button>
       </div>
-      <label class="check"><input type="checkbox" id="chkLoop" checked /> Loop show</label>
     </section>
 
     <section data-pane="create" class="pane">
@@ -114,7 +128,7 @@
 
     <section data-pane="music" class="pane">
       <div class="grid2">
-        <button id="btnDemoBeat">▶ Demo beat</button>
+        <button id="btnDemoBeat">▶ Demo music</button>
         <label class="file-btn">♫ Music file…
           <input type="file" id="inpAudio" accept="audio/*" />
         </label>
@@ -149,6 +163,8 @@
       <label class="check"><input type="checkbox" id="chkPagoda" checked /> Shwedagon pagoda</label>
       <label class="check"><input type="checkbox" id="chkBalloons" checked /> မီးပုံးပျံ Fire balloons</label>
       <label class="check"><input type="checkbox" id="chkLanterns" checked /> Small sky lanterns</label>
+      <label class="check"><input type="checkbox" id="chkSnow" /> Snow</label>
+      <label class="check"><input type="checkbox" id="chkXmas" /> Christmas tree &amp; string lights</label>
       <label class="field">Glow strength
         <input type="range" id="rngBloom" min="0" max="2.5" step="0.05" value="0.9" />
       </label>
