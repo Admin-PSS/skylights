@@ -25,6 +25,41 @@ export class AudioEngine {
     return this.recDest.stream;
   }
 
+  /** Countdown tick (higher for the last three seconds). */
+  tick(n) {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.sfxOn) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(n <= 3 ? 1500 : 1050, t);
+    o.frequency.exponentialRampToValueAtTime(n <= 3 ? 900 : 620, t + 0.09);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(n <= 3 ? 0.5 : 0.32, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    o.connect(g); g.connect(this.sfx);
+    o.start(t); o.stop(t + 0.16);
+  }
+
+  /** A crowd cheer at midnight (filtered noise swell). */
+  cheer() {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.sfxOn) return;
+    const t = this.ctx.currentTime;
+    [[1300, 0.8, 0.45], [600, 0.5, 0.3], [2600, 2, 0.12]].forEach(([f, q, peak]) => {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise; s.loop = true;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.35);
+      g.gain.setValueAtTime(peak, t + 1.2);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 3.6);
+      s.connect(bp); bp.connect(g); g.connect(this.sfx);
+      s.start(t, Math.random() * 0.5); s.stop(t + 3.8);
+    });
+  }
+
   /** Create/resume the audio context (must happen inside a user gesture). */
   unlock() {
     this._ensure();

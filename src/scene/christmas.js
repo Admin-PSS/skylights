@@ -32,7 +32,7 @@ const twinkleFragment = /* glsl */ `
   }
 `;
 
-function makeTwinklePoints(pos, col, size, phase) {
+export function makeTwinklePoints(pos, col, size, phase) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
@@ -187,7 +187,7 @@ function createGiantTree() {
 }
 
 // ---------- colored string lights along rooftops ----------
-function createRoofLights(lots) {
+export function createRoofLights(lots, bulbs = BULBS) {
   const rnd = mulberry32(2412);
   const pos = [], col = [], size = [], phase = [];
   const MAX = 5200;
@@ -199,7 +199,7 @@ function createRoofLights(lots) {
     const y = LAYOUT.bankHeight + b.h + 0.6;
     const hw = b.w / 2, hd = b.d / 2;
     const corners = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd], [-hw, -hd]];
-    const palette = rnd() < 0.3 ? null : BULBS[(rnd() * BULBS.length) | 0]; // some buildings one color, others multicolor
+    const palette = rnd() < 0.3 ? null : bulbs[(rnd() * bulbs.length) | 0]; // some buildings one color, others multicolor
     let k = 0;
     for (let e = 0; e < 4; e++) {
       const [ax, az] = corners[e], [bx, bz] = corners[e + 1];
@@ -207,7 +207,7 @@ function createRoofLights(lots) {
       for (let j = 0; j < n; j++) {
         const t = j / n;
         pos.push(b.x + ax + (bx - ax) * t, y, b.z + az + (bz - az) * t);
-        const c = palette || BULBS[k % BULBS.length];
+        const c = palette || bulbs[k % bulbs.length];
         col.push(c[0] * 0.8, c[1] * 0.8, c[2] * 0.8);
         size.push(1.5);
         phase.push(rnd() * 10);

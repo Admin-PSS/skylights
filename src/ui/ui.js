@@ -81,6 +81,9 @@ export function initUI(app) {
     $('chkBalloons').checked = th.scene.balloons !== 'off';
     $('chkSnow').checked = th.scene.snow;
     $('chkXmas').checked = th.scene.xmas;
+    $('chkParty').checked = !!th.scene.party;
+    $('nyBox').hidden = id !== 'newyear';
+    if (id !== 'newyear') $('chkLiveMidnight').checked = false;
     fillTitleForm?.();
   };
   app.onTheme(syncScene);
@@ -105,7 +108,7 @@ export function initUI(app) {
     box.value = link;
     box.hidden = false;
     const th = app.themes[app.settings.theme];
-    const text = to ? `${th.greeting.title.replace('{to}', to)}! ✨` : `${th.title.title}! ✨`;
+    const text = (to ? `${th.greeting.title.replace('{to}', to)}!` : `${th.title.title.replace('{year}', show.year)}!`) + ' ✨';
     try {
       if (navigator.share) { await navigator.share({ title: 'SkyLights', text, url: link }); greetStatus.textContent = 'Shared.'; return; }
     } catch (e) { if (e?.name === 'AbortError') return; }
@@ -252,6 +255,9 @@ export function initUI(app) {
   $('chkBalloons').onchange = (e) => app.setBalloons(e.target.checked);
   $('chkSnow').onchange = (e) => app.setSnow(e.target.checked);
   $('chkXmas').onchange = (e) => app.setXmasDecor(e.target.checked);
+  $('chkParty').onchange = (e) => app.setPartyDecor(e.target.checked);
+  $('chkLiveMidnight').onchange = (e) => app.setLiveMidnight(e.target.checked);
+  $('btnPractice').onclick = () => { $('chkLiveMidnight').checked = false; app.practiceCountdown(30); };
   $('btnFire').onclick = () => app.fireVolley();
   const selCount = $('selCount');
   selCount.value = String(app.settings.count);

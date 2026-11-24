@@ -39,6 +39,7 @@
     <div id="caption" class="caption"></div>
   </div>
 
+  <div id="liveClock" class="live-clock" hidden></div>
   <button id="btnShowUI" class="show-ui" title="Show controls (H)">◉</button>
 
   <div id="transport" class="transport ui">
@@ -68,6 +69,11 @@
       <label class="field">Occasion
         <select id="selTheme"></select>
       </label>
+      <div class="title-box" id="nyBox" hidden>
+        <label class="check"><input type="checkbox" id="chkLiveMidnight" /> Count down to real midnight (this device’s time)</label>
+        <p class="hint">The show plays normally, then the drones count 10 → 1 so that 0 lands exactly at 00:00:00, followed by the new year, fireworks and confetti. Great on a TV or projector at a party.</p>
+        <button id="btnPractice" class="ghost">Practice: midnight in 30 seconds</button>
+      </div>
       <details class="title-box" id="greetBox">
         <summary>Personal greeting</summary>
         <p class="hint">Put a name in the sky and on the title card, then share a link that plays this greeting for them.</p>
@@ -165,6 +171,7 @@
       <label class="check"><input type="checkbox" id="chkLanterns" checked /> Small sky lanterns</label>
       <label class="check"><input type="checkbox" id="chkSnow" /> Snow</label>
       <label class="check"><input type="checkbox" id="chkXmas" /> Christmas tree &amp; string lights</label>
+      <label class="check"><input type="checkbox" id="chkParty" /> New Year gold &amp; silver lights</label>
       <label class="field">Glow strength
         <input type="range" id="rngBloom" min="0" max="2.5" step="0.05" value="0.9" />
       </label>

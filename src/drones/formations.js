@@ -32,6 +32,9 @@ export const FORMATIONS = {
   bells: { name: 'Christmas bells', icon: '🔔' },
   snowflake: { name: 'Snowflake', icon: '❄' },
   candycane: { name: 'Candy cane', icon: '🍬' },
+  countdown: { name: 'Countdown 10 → 1', icon: '⏱' },
+  clock: { name: 'Midnight clock', icon: '🕛' },
+  champagne: { name: 'Champagne toast', icon: '🥂' },
   land: { name: 'Landing', icon: '▁' },
 };
 
@@ -782,6 +785,64 @@ function candyCane(N) {
   return canvasPoints(c, N, 130, true);
 }
 
+// ---------------- New Year shapes ----------------
+
+/** Clock face a breath before midnight: hands almost at 12, second hand sweeping. */
+function midnightClock(N) {
+  const [c, g] = blankCanvas(260, 260);
+  const X = 130, Y = 130;
+  g.strokeStyle = '#ffc23a'; g.lineWidth = 9;
+  g.beginPath(); g.arc(X, Y, 118, 0, Math.PI * 2); g.stroke();
+  g.strokeStyle = '#dfe6f2'; g.lineWidth = 3;
+  g.beginPath(); g.arc(X, Y, 103, 0, Math.PI * 2); g.stroke();
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2 - Math.PI / 2;
+    if (k % 3 === 0) {
+      g.save(); g.translate(X + Math.cos(a) * 88, Y + Math.sin(a) * 88); g.rotate(a + Math.PI / 2);
+      g.fillStyle = '#ffffff'; g.fillRect(-4, -11, 8, 22); g.restore();
+    } else ell(g, X + Math.cos(a) * 90, Y + Math.sin(a) * 90, 4.5, 4.5, '#ffd45a');
+  }
+  const hand = (frac, len, w, col) => {
+    const a = frac * Math.PI * 2 - Math.PI / 2;
+    g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(X - Math.cos(a) * 12, Y - Math.sin(a) * 12); g.lineTo(X + Math.cos(a) * len, Y + Math.sin(a) * len); g.stroke();
+  };
+  hand(11.98 / 12, 56, 11, '#ffffff'); // hour
+  hand(59 / 60, 86, 7, '#ffd45a'); // minute
+  hand(48 / 60, 92, 3.5, '#ff3b44'); // second
+  ell(g, X, Y, 9, 9, '#ffd45a');
+  return canvasPoints(c, N, 175, true);
+}
+
+/** Two champagne flutes clinking, with bubbles and a burst of sparkle where they meet. */
+function champagneToast(N) {
+  const [c, g] = blankCanvas(300, 270);
+  const flute = (cx, baseY, rot) => {
+    g.save(); g.translate(cx, baseY); g.rotate(rot);
+    ell(g, 0, 0, 32, 6, '#e8eef8');
+    g.fillStyle = '#e8eef8'; g.fillRect(-3, -70, 6, 70);
+    const bowl = () => {
+      g.beginPath(); g.moveTo(-22, -205); g.lineTo(22, -205);
+      g.quadraticCurveTo(25, -112, 4, -72); g.lineTo(-4, -72); g.quadraticCurveTo(-25, -112, -22, -205); g.closePath();
+    };
+    g.save(); bowl(); g.clip();
+    g.fillStyle = '#ffcf4a'; g.fillRect(-30, -172, 60, 110);
+    for (let k = 0; k < 9; k++) ell(g, -10 + ((k * 37) % 21), -90 - k * 9, 2.4, 2.4, '#fff6d8');
+    g.restore();
+    bowl(); g.strokeStyle = '#e8eef8'; g.lineWidth = 4; g.stroke();
+    g.restore();
+  };
+  flute(98, 262, 0.08);
+  flute(202, 262, -0.08); // a clear gap between the glasses, sparkle above it
+  g.strokeStyle = '#ffd45a'; g.lineWidth = 3; g.lineCap = 'round';
+  for (let k = 0; k < 9; k++) {
+    const a = -Math.PI / 2 + (k - 4) * 0.33;
+    g.beginPath(); g.moveTo(150 + Math.cos(a) * 14, 50 + Math.sin(a) * 14); g.lineTo(150 + Math.cos(a) * 34, 50 + Math.sin(a) * 34); g.stroke();
+  }
+  ell(g, 150, 50, 5, 5, '#ffffff');
+  return canvasPoints(c, N, 175, true);
+}
+
 /** Build the formation for a show step. Returns a Promise (images decode asynchronously). */
 export async function buildFormation(step, N) {
   switch (step.formation) {
@@ -815,6 +876,9 @@ export async function buildFormation(step, N) {
     case 'bells': return christmasBells(N);
     case 'snowflake': return snowflake(N);
     case 'candycane': return candyCane(N);
+    case 'countdown': return text(N, String(step.from || 10));
+    case 'clock': return midnightClock(N);
+    case 'champagne': return champagneToast(N);
     default: return sphere(N);
   }
 }

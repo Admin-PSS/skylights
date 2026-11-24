@@ -17,7 +17,8 @@ import { createShwedagon } from './scene/shwedagon.js';
 import { TitleCard } from './scene/titlecard.js';
 import { FireBalloons } from './scene/balloons.js';
 import { createChristmasScene } from './scene/christmas.js';
-import { THEMES, initialTheme, rememberThemeChoice } from './themes.js';
+import { createNewYearScene } from './scene/newyear.js';
+import { THEMES, initialTheme, rememberThemeChoice, fillYear, nextMidnight } from './themes.js';
 import { DroneSwarm } from './drones/swarm.js';
 import { SHOW_CENTER } from './drones/formations.js';
 import { ShowController } from './show/show.js';
@@ -82,7 +83,9 @@ balloons.seed();
 const xmas = createChristmasScene(city.lots, { mobile: isMobile });
 xmas.snow.visible = false;
 xmas.decor.visible = false;
-scene.add(sky.group, moon.mesh, city.group, shwedagon.group, water.group, spots.group, lasers.group, fireworks.group, lanterns.points, balloons.group, xmas.snow, xmas.decor);
+const newyear = createNewYearScene(city.lots, { mobile: isMobile });
+newyear.decor.visible = false;
+scene.add(sky.group, moon.mesh, city.group, shwedagon.group, water.group, spots.group, lasers.group, fireworks.group, lanterns.points, balloons.group, xmas.snow, xmas.decor, newyear.decor, newyear.confetti);
 lasers.setResolution(window.innerWidth, window.innerHeight);
 
 const swarm = new DroneSwarm(scene, settings.count, SHOW_CENTER);
@@ -168,6 +171,49 @@ function setCamera(name) {
   };
 }
 
+// ---------- New Year: live countdown to real midnight ----------
+let liveTarget = null; // epoch ms of the midnight we count down to
+let liveIsPractice = false;
+let celebrateUntil = 0;
+const liveClock = document.getElementById('liveClock');
+function setLiveMidnight(target, practice = false) {
+  liveTarget = target;
+  liveIsPractice = practice;
+  show.liveMode = !!target;
+  show.midnightArmed = false;
+  if (target && !practice) show.year = new Date(target).getFullYear();
+  liveClock.hidden = !target;
+}
+const fmtLeft = (ms) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return (h ? `${h}:${String(m).padStart(2, '0')}` : `${m}`) + `:${String(sec).padStart(2, '0')}`;
+};
+function updateLiveCountdown(now) {
+  if (liveTarget) {
+    const left = liveTarget - Date.now();
+    const cd = show.steps.find((s) => s.formation === 'countdown');
+    const lead = (cd ? cd.duration : 10) * 1000;
+    if (!show.midnightArmed && left <= lead && left > 0) {
+      show.midnightArmed = true;
+      show.startCountdownAt(left);
+    }
+    if (left <= 0) {
+      celebrateUntil = now + 60;
+      liveClock.textContent = `🎆 Happy New Year ${show.year}!`;
+      setLiveMidnight(null);
+      liveClock.hidden = false;
+      return;
+    }
+    liveClock.textContent = `⏳ ${fmtLeft(left)} to midnight${liveIsPractice ? ' (practice)' : ''}`;
+  } else if (celebrateUntil && now > celebrateUntil) {
+    celebrateUntil = 0;
+    liveClock.hidden = true;
+  }
+}
+
+const fx = { flash: 0, shift: 0, nextRocket: 0 };
+
 // ---------- Occasion themes ----------
 const params = new URLSearchParams(location.search);
 const themeListeners = new Set();
@@ -180,9 +226,13 @@ function applyTheme(id, { manual = false } = {}) {
   balloons.group.visible = th.scene.balloons !== 'off';
   xmas.snow.visible = th.scene.snow;
   xmas.decor.visible = th.scene.xmas;
+  newyear.decor.visible = !!th.scene.party;
   show.setTheme(id, th.build, { balloons: th.scene.balloons });
   // title-card texts follow the theme, but only when the theme changes (so the viewer's own edits stay)
-  if (titleCard.text.theme !== id) titleCard.set({ ...th.title, theme: id });
+  const y = show.year;
+  const titles = Object.fromEntries(Object.entries(th.title).map(([k, v]) => [k, fillYear(v, y)]));
+  if (titleCard.text.theme !== id) titleCard.set({ ...titles, theme: id });
+  if (id !== 'newyear') setLiveMidnight(null);
   if (audio.mode === 'demo' && audio.style !== th.music) audio.startDemo(th.music);
   if (manual) rememberThemeChoice(id);
   themeListeners.forEach((fn) => fn(id, th));
@@ -194,7 +244,7 @@ if (params.get('to') || params.get('from')) {
   const to = (params.get('to') || '').slice(0, 24), from = (params.get('from') || '').slice(0, 40);
   show.setGreeting(to, from);
   const th = THEMES[settings.theme];
-  titleCard.set({ title: to ? th.greeting.title.replace('{to}', to) : th.title.title, presenter: from });
+  titleCard.set({ title: to ? th.greeting.title.replace('{to}', to) : fillYear(th.title.title, show.year), presenter: from });
 }
 
 // ---------- App API used by the UI ----------
@@ -210,9 +260,21 @@ const app = {
   setGreeting(to, from) {
     show.setGreeting(to, from);
     const th = THEMES[settings.theme];
-    titleCard.set({ title: to ? th.greeting.title.replace('{to}', to) : th.title.title, presenter: from || titleCard.text.presenter });
+    titleCard.set({ title: to ? th.greeting.title.replace('{to}', to) : fillYear(th.title.title, show.year), presenter: from || titleCard.text.presenter });
   },
   setSnow: (on) => (xmas.snow.visible = on),
+  setPartyDecor: (on) => (newyear.decor.visible = on),
+  /** New Year live mode: count down to the coming local midnight. */
+  setLiveMidnight(on) {
+    setLiveMidnight(on ? nextMidnight() : null);
+    if (on) { show.setPlaying(true); }
+  },
+  /** Rehearse the midnight moment: “midnight” arrives in `seconds`. */
+  practiceCountdown(seconds = 30) {
+    audio.unlock();
+    setLiveMidnight(Date.now() + seconds * 1000, true);
+    show.setPlaying(true);
+  },
   setXmasDecor: (on) => (xmas.decor.visible = on),
   setCamera,
   setOrbit: (on) => (controls.autoRotate = on),
@@ -241,8 +303,19 @@ const app = {
 };
 const ui = initUI(app);
 
+// countdown ticks, and the midnight celebration
+show.on((type) => {
+  if (type === 'tick') {
+    audio.tick(show.lastTick);
+    fx.flash = 1;
+  }
+  if (type === 'step' && show.current?.celebrate) {
+    audio.cheer();
+    fireworks.volley(12, { center: SHOW_CENTER, palette: show.look.colors });
+  }
+});
+
 // ---------- Main loop ----------
-const fx = { flash: 0, shift: 0, nextRocket: 0 };
 let last = performance.now() / 1000;
 
 function frame() {
@@ -291,6 +364,8 @@ function frame() {
   shwedagon.update(now, camera);
   lanterns.update(now, dt);
   xmas.update(now);
+  newyear.update(now, dt, show.look.confetti);
+  updateLiveCountdown(now);
 
   glowUniforms.uTime.value = now;
   sky.update(now, renderer.getPixelRatio());

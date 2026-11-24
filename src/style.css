@@ -66,6 +66,14 @@ button.on { border-color: var(--accent); color: var(--accent); }
   transition: opacity 0.6s; white-space: nowrap;
 }
 
+.live-clock {
+  position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); z-index: 4;
+  padding: 8px 18px; border-radius: 999px; font: 700 18px/1.2 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: #fff6d8;
+  background: rgba(20, 16, 40, 0.75); border: 1px solid rgba(255, 210, 122, 0.45);
+  box-shadow: 0 0 24px rgba(255, 190, 80, 0.25);
+}
+
 /* Transport */
 .transport {
   position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);

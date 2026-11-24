@@ -44,10 +44,35 @@ export function christmasShow() {
     step('bells', 'glitter', 'xmas', 8, { fireworks: 'some' }),
     step('candycane', 'image', 'candy', 7),
     step('text', 'glitter', 'xmas', 8, { text: 'ပျော်ရွှင်ဖွယ်|ခရစ္စမတ်' }),
-    step('text', 'pulse', 'royal', 9, { text: 'HAPPY NEW YEAR|2027', laser: 'fan', fireworks: 'lots' }),
+    step('text', 'pulse', 'royal', 9, { text: 'HAPPY NEW YEAR|{year}', laser: 'fan', fireworks: 'lots' }),
     step('burst', 'pulse', 'xmas', 8, { laser: 'fan', fireworks: 'lots' }),
     step('land', 'solid', 'snow', 7),
   ];
+}
+
+/**
+ * New Year's Eve. The countdown and the year reveal are “midnight” steps: in live mode they wait
+ * for real midnight, so 1 → 0 lands exactly on 00:00:00.
+ */
+export function newYearShow() {
+  return [
+    step('launch', 'solid', 'champagne', 4),
+    step('lift', 'wave', 'champagne', 6, { laser: 'fan' }),
+    step('text', 'glitter', 'royal', 9, { text: 'HAPPY|NEW YEAR', greet: 'HAPPY NEW YEAR|{to}', laser: 'fan' }),
+    step('champagne', 'glitter', 'champagne', 9, { fireworks: 'some' }),
+    step('clock', 'image', 'champagne', 8),
+    step('countdown', 'pulse', 'party', 10, { from: 10, midnight: true, laser: 'fan' }),
+    step('text', 'glitter', 'royal', 12, { text: '{year}', midnight: true, celebrate: true, confetti: true, laser: 'fan', fireworks: 'lots' }),
+    step('burst', 'pulse', 'party', 8, { confetti: true, laser: 'fan', fireworks: 'lots' }),
+    step('text', 'glitter', 'champagne', 8, { text: 'ပျော်ရွှင်ဖွယ်|နှစ်သစ်ကူး', confetti: true, fireworks: 'some' }),
+    step('star', 'pulse', 'royal', 7, { laser: 'target' }),
+    step('land', 'solid', 'champagne', 6),
+  ];
+}
+
+/** The year that is about to begin — or, during January, the one that just began. */
+export function upcomingYear(d = new Date()) {
+  return d.getMonth() === 0 ? d.getFullYear() : d.getFullYear() + 1;
 }
 
 export function demoShow() {
@@ -74,7 +99,7 @@ export const FIREWORK_MODES = { off: 'Off', some: 'Some', lots: 'Finale (lots)' 
 export const BALLOON_MODES = { few: 'A few drifting', launch: 'Mass launch', off: 'None' };
 
 export function stepLabel(s) {
-  if (s.formation === 'text') return `“${s.text.replace(/\|/g, ' ')}”${s.greet ? ' + name' : ''}`;
+  if (s.formation === 'text') return `“${s.text.replace(/\|/g, ' ').replace('{year}', upcomingYear())}”${s.greet ? ' + name' : ''}`;
   return FORMATIONS[s.formation]?.name ?? s.formation;
 }
 export function stepSub(s) {
@@ -94,6 +119,10 @@ export class ShowController {
     this.defaults = { balloons: 'few' };
     this.greeting = { to: '', from: '' };
     this.steps = [];
+    this.year = upcomingYear();
+    this.liveMode = false; // New Year: hold midnight steps until real midnight
+    this.midnightArmed = false;
+    this._cd = null;
     this.index = -1;
     this.playing = true;
     this.loop = true;
@@ -128,7 +157,8 @@ export class ShowController {
 
   /** The text a step shows, with the greeting name filled in where the step has one. */
   stepText(s) {
-    return s.greet && this.greeting.to ? s.greet.replace('{to}', this.greeting.to.toUpperCase()) : s.text;
+    const t = s.greet && this.greeting.to ? s.greet.replace('{to}', this.greeting.to.toUpperCase()) : s.text;
+    return t && t.replace('{year}', this.year || upcomingYear());
   }
 
   async _formation(s) {
@@ -156,7 +186,7 @@ export class ShowController {
 
   _applyLook(s) {
     this.current = s;
-    this.look = { effect: s.effect, colors: paletteColors(s.palette), laser: s.laser || 'off', fireworks: s.fireworks || 'off', balloons: s.balloons || this.defaults.balloons, duration: s.duration };
+    this.look = { effect: s.effect, colors: paletteColors(s.palette), laser: s.laser || 'off', fireworks: s.fireworks || 'off', balloons: s.balloons || this.defaults.balloons, confetti: !!s.confetti, duration: s.duration };
   }
 
   async _show(s, now) {
@@ -173,17 +203,49 @@ export class ShowController {
     if (!this.steps.length) return;
     this.index = (i + this.steps.length) % this.steps.length;
     this.stepTime = 0;
-    await this._show(this.steps[this.index]);
+    const s = this.steps[this.index];
+    this._cd = null;
+    await this._show(s);
     this._emit('step');
+    if (s.formation === 'countdown') this._tick(s.from || 10);
+  }
+
+  /** Countdown: one drone digit per second (fast flights), with a tick each second. */
+  _tick(n) {
+    this._cd = n;
+    this.lastTick = n;
+    this._emit('tick');
+  }
+  async _showDigit(n) {
+    const f = await this._formation({ formation: 'text', text: String(n) });
+    if (this._cd === n) this.swarm.goTo(f, performance.now() / 1000, 0.8);
+  }
+
+  /** Live mode: start the countdown so that it reaches 0 exactly `msLeft` from now. */
+  async startCountdownAt(msLeft) {
+    const i = this.steps.findIndex((s) => s.formation === 'countdown');
+    if (i < 0) return;
+    const s = this.steps[i];
+    await this.goTo(i);
+    this.setPlaying(true);
+    this.stepTime = Math.max(0, s.duration - msLeft / 1000);
+    const n = (s.from || 10) - Math.floor(this.stepTime);
+    if (n !== this._cd && n >= 1) { this._tick(n); this._showDigit(n); }
   }
 
   next() {
-    if (this.index + 1 >= this.steps.length && !this.loop) {
+    let i = this.index + 1;
+    // in live New Year mode, skip the countdown and year reveal until midnight arms them
+    if (this.liveMode && !this.midnightArmed) {
+      let guard = 0;
+      while (this.steps[i % this.steps.length]?.midnight && guard++ < this.steps.length) i++;
+    }
+    if (i >= this.steps.length && !this.loop) {
       this.playing = false;
       this._emit('play');
       return;
     }
-    this.goTo(this.index + 1);
+    this.goTo(i);
   }
   prev() { this.goTo(this.index - 1); }
 
@@ -240,7 +302,12 @@ export class ShowController {
   update(dt) {
     if (!this.playing || this.index < 0 || !this.steps.length) return;
     this.stepTime += dt;
-    if (this.stepTime >= this.steps[this.index].duration) this.next();
+    const s = this.steps[this.index];
+    if (s.formation === 'countdown' && this.current === s) {
+      const n = (s.from || 10) - Math.floor(this.stepTime);
+      if (n >= 1 && n !== this._cd) { this._tick(n); this._showDigit(n); }
+    }
+    if (this.stepTime >= s.duration) this.next();
   }
 
   get progress() {

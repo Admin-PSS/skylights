@@ -18,6 +18,8 @@ export const PALETTES = {
   xmas: { name: 'Christmas', colors: ['#e0262e', '#1fa64a', '#ffd45a'] },
   snow: { name: 'Snow', colors: ['#ffffff', '#cfe9ff', '#8fc8ff'] },
   candy: { name: 'Candy', colors: ['#ff2d55', '#ffffff', '#ff8fab'] },
+  champagne: { name: 'Champagne', colors: ['#ffd27a', '#fff6d8', '#c9d3e6'] },
+  party: { name: 'Party', colors: ['#ffd24a', '#ff3db4', '#3dd6ff'] },
 };
 
 const cache = new Map();
