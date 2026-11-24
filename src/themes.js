@@ -22,6 +22,7 @@ export const THEMES = {
   christmas: {
     name: '🎄 Merry Christmas',
     build: christmasShow,
+    path: 'christmas/', // has its own link preview (public/christmas/)
     scene: { pagoda: false, moon: false, lanterns: false, balloons: 'off', snow: true, xmas: true, party: false },
     music: 'jingle',
     title: {
@@ -36,6 +37,7 @@ export const THEMES = {
   newyear: {
     name: '🎆 Happy New Year',
     build: newYearShow,
+    path: 'newyear/',
     scene: { pagoda: false, moon: false, lanterns: false, balloons: 'off', snow: false, xmas: false, party: true },
     music: 'festival',
     title: {
@@ -105,10 +107,10 @@ export function rememberThemeChoice(id) {
 
 /** A link that opens SkyLights with this theme and a personal greeting. */
 export function personalLink(themeId, to, from) {
-  const u = new URL(location.href);
-  u.search = '';
-  u.hash = '';
-  u.searchParams.set('theme', themeId);
+  const base = new URL('./', location.href);
+  const path = THEMES[themeId]?.path;
+  const u = new URL(path || './', base);
+  if (!path) u.searchParams.set('theme', themeId);
   if (to) u.searchParams.set('to', to);
   if (from) u.searchParams.set('from', from);
   return u.toString();
